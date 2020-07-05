@@ -12,17 +12,11 @@
 
 const int TEMPERTURE_ANALOG_INPUT_PIN = 0;
 const int LIGHT_ANALOG_INPUT_PIN = 1;
-const int LED_PIN = 13;
 
-// enumerating 3 major temperature scales
-enum {
-  T_KELVIN = 0,
-  T_CELSIUS,
-  T_FAHRENHEIT
-};
-
-#define EPISCO_K164_10k 4300.0f,298.15f,50000.0f  // B,T0,R0  
-
+///////////////////////////////////////////////////////////////////////////////////////////
+// Light level sensor
+// based on https://www.allaboutcircuits.com/projects/design-a-luxmeter-using-a-light-dependent-resistor/
+///////////////////////////////////////////////////////////////////////////////////////////
 
 float LightLevel()
 {
@@ -31,9 +25,8 @@ float LightLevel()
   // REF_RESISTANCE is 5 kohm
   const int REF_RESISTANCE = 5030;
 
-  // copied from https://www.allaboutcircuits.com/projects/design-a-luxmeter-using-a-light-dependent-resistor/
+  // calculated from Lux_Approximation_from_LDR.xlsx
   const double LUX_CALC_SCALAR = 3570405606;
-
   const double LUX_CALC_EXPONENT = -2.141;
 
   // Perform the analog to digital conversion  
@@ -56,6 +49,17 @@ float LightLevel()
   float ldrLux = LUX_CALC_SCALAR * pow(ldrResistance, LUX_CALC_EXPONENT);
   return ldrLux;
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////
+// Temperture sensor
+///////////////////////////////////////////////////////////////////////////////////////////
+
+// enumerating 3 major temperature scales
+enum {
+  T_KELVIN = 0,
+  T_CELSIUS,
+  T_FAHRENHEIT
+};
 
 float Temperature(int OutputUnit)
 {
@@ -81,17 +85,15 @@ float Temperature(int OutputUnit)
   return T;
 }
 
-//example of use #2
-// using numbers instead of episco k164 definition
-// this time reading from analog input 2
-// getting result in fahrenheit
 
+///////////////////////////////////////////////////////////////////////////////////////////
+// Setup and loop
+///////////////////////////////////////////////////////////////////////////////////////////
 void setup() {
   Serial.begin(9600);
 }
 
 void loop() {
-
   Serial.println("********");
   Serial.println("Temp");
   Serial.println(Temperature(T_CELSIUS));
