@@ -1,6 +1,8 @@
 #include <math.h>
 
-//Schematic (excluding sd card module):
+// Board: Arduino Uno
+// 
+// Schematic (excluding sd card module):
 // [Ground] --|-- [10k-Resistor] -------|------- [Thermistor 503] ---- [+5v]
 //            |                         |                               |
 //            |                    Analog Pin 0                         |
@@ -49,7 +51,7 @@ void ClockSetup()
 
   // Set the SystemClock using these components.
   auto easternTime = ZonedDateTime::forComponents(
-                       2020, 7, 5, 19, 39, 0, easternTz);
+                       2020, 7, 5, 19, 48, 0, easternTz);
   systemClock.setNow(easternTime.toEpochSeconds());
 }
 
@@ -199,5 +201,6 @@ void setup() {
 }
 
 void loop() {
-  LogToSdAtInterval(2);
+  // write temp & lux every 5 min
+  LogToSdAtInterval(300);
 }
