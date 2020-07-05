@@ -1,6 +1,6 @@
 #include <math.h>
 
-//Schematic:
+//Schematic (excluding sd card module):
 // [Ground] --|-- [10k-Resistor] -------|------- [Thermistor 503] ---- [+5v]
 //            |                         |                               |
 //            |                    Analog Pin 0                         |
@@ -9,10 +9,18 @@
 //            |-- [10k-Resistor] -------|------- [LDR]---------------- [+5v]
 //                                      |
 //                                 Analog Pin 1
+//
+// SD card Module pin wiring:
+// MISO 12
+// CLK 13
+// MOSI 11
+// CS Digital 4
+// VCC 5v
+// GND GND
 
 const int TEMPERTURE_ANALOG_INPUT_PIN = 0;
 const int LIGHT_ANALOG_INPUT_PIN = 1;
-
+const int SD_CHIP_SELECT = 4;
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 // Time
@@ -55,7 +63,7 @@ String GetCurrentTime()
   auto easternTime = ZonedDateTime::forEpochSeconds(now, easternTz);
 
   String timeString = String(easternTime.year()) + ' ' + String(easternTime.month()) + ' '
-                      + String(easternTime.day()) + ' ' + String(easternTime.hour()) + ':' 
+                      + String(easternTime.day()) + ' ' + String(easternTime.hour()) + ':'
                       + String(easternTime.minute());
   return timeString;
 }
@@ -132,6 +140,53 @@ float Temperature(int OutputUnit)
   return T;
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////
+// Write to SD card
+///////////////////////////////////////////////////////////////////////////////////////////
+
+#include <SPI.h> //for the SD card module
+#include <SD.h> // for the SD card
+
+void SdSetup()
+{
+  if (!SD.begin(SD_CHIP_SELECT)) {
+    Serial.println("SD initialization failed!");
+    return;
+  }
+
+  //open file
+  File myFile = SD.open("DATA.txt", FILE_WRITE);
+
+  // if the file opened ok, write to it:
+  if (myFile) {
+    Serial.println("File opened ok");
+    // print the headings for our data
+    myFile.println("Time Stamp,Temperature ºC,Lux");
+  }
+  myFile.close();
+}
+
+void LogToSd() {
+  File myFile = SD.open("DATA.txt", FILE_WRITE);
+
+  if (myFile) {
+    myFile.println(GetCurrentTime() + ',' + Temperature(T_CELSIUS) + ',' + LightLevel());
+    Serial.println("wrote to sd: " + GetCurrentTime() + ',' + Temperature(T_CELSIUS)
+                   + ',' + LightLevel());
+  }
+  myFile.close();
+}
+
+
+void LogToSdAtInterval(int seconds) {
+  static acetime_t prevNow = systemClock.getNow();
+  systemClock.loop();
+  acetime_t now = systemClock.getNow();
+  if (now - prevNow >= seconds) {
+    LogToSd();
+    prevNow = now;
+  }
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 // Setup and loop
@@ -140,18 +195,9 @@ void setup() {
   Serial.begin(9600);
 
   ClockSetup();
+  SdSetup();
 }
 
 void loop() {
-  Serial.println("********");
-  Serial.println("Time");
-  Serial.println(GetCurrentTime());
-  Serial.println("Temp");
-  Serial.println(Temperature(T_CELSIUS));
-  Serial.println("Light");
-  Serial.println(LightLevel());
-  Serial.println("********");
-  Serial.println(" ");
-
-  delay(500);
+  LogToSdAtInterval(2);
 }
