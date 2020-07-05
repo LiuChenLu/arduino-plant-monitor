@@ -13,6 +13,53 @@
 const int TEMPERTURE_ANALOG_INPUT_PIN = 0;
 const int LIGHT_ANALOG_INPUT_PIN = 1;
 
+
+///////////////////////////////////////////////////////////////////////////////////////////
+// Time
+///////////////////////////////////////////////////////////////////////////////////////////
+
+#include <AceTime.h>
+
+using namespace ace_time;
+using namespace ace_time::clock;
+
+// ZoneProcessor instance should be created statically at initialization time.
+static BasicZoneProcessor easternProcessor;
+
+static SystemClockLoop systemClock(nullptr /*reference*/, nullptr /*backup*/);
+
+void ClockSetup()
+{
+#if ! defined(UNIX_HOST_DUINO)
+  delay(1000);
+#endif
+
+  systemClock.setup();
+
+  auto easternTz = TimeZone::forZoneInfo(&zonedb::kZoneAmerica_New_York,
+                                         &easternProcessor);
+
+  // Set the SystemClock using these components.
+  auto easternTime = ZonedDateTime::forComponents(
+                       2020, 7, 5, 19, 39, 0, easternTz);
+  systemClock.setNow(easternTime.toEpochSeconds());
+}
+
+String GetCurrentTime()
+{
+  acetime_t now = systemClock.getNow();
+
+  // Creating timezones is cheap, so we can create them on the fly as needed.
+  auto easternTz = TimeZone::forZoneInfo(&zonedb::kZoneAmerica_New_York,
+                                         &easternProcessor);
+  auto easternTime = ZonedDateTime::forEpochSeconds(now, easternTz);
+
+  String timeString = String(easternTime.year()) + ' ' + String(easternTime.month()) + ' '
+                      + String(easternTime.day()) + ' ' + String(easternTime.hour()) + ':' 
+                      + String(easternTime.minute());
+  return timeString;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////
 // Light level sensor
 // based on https://www.allaboutcircuits.com/projects/design-a-luxmeter-using-a-light-dependent-resistor/
@@ -29,20 +76,20 @@ float LightLevel()
   const double LUX_CALC_SCALAR = 3570405606;
   const double LUX_CALC_EXPONENT = -2.141;
 
-  // Perform the analog to digital conversion  
+  // Perform the analog to digital conversion
   int ldrRawData = analogRead(LIGHT_ANALOG_INPUT_PIN);
-  
+
   // RESISTOR VOLTAGE_CONVERSION
   // Convert the raw digital data back to the voltage that was measured on the analog pin
   float resistorVoltage = (float)ldrRawData / MAX_ADC_READING * ADC_REF_VOLTAGE;
-  
+
 
   // voltage across the LDR is the 5V supply minus the 5k resistor voltage
   float ldrVoltage = ADC_REF_VOLTAGE - resistorVoltage;
 
   // LDR_RESISTANCE_CONVERSION
-  // resistance that the LDR would have for that voltage  
-  double ldrResistance = ldrVoltage/resistorVoltage * REF_RESISTANCE;
+  // resistance that the LDR would have for that voltage
+  double ldrResistance = ldrVoltage / resistorVoltage * REF_RESISTANCE;
   // LDR_LUX
   // Change the code below to the proper conversion from ldrResistance to
   // ldrLux
@@ -91,10 +138,14 @@ float Temperature(int OutputUnit)
 ///////////////////////////////////////////////////////////////////////////////////////////
 void setup() {
   Serial.begin(9600);
+
+  ClockSetup();
 }
 
 void loop() {
   Serial.println("********");
+  Serial.println("Time");
+  Serial.println(GetCurrentTime());
   Serial.println("Temp");
   Serial.println(Temperature(T_CELSIUS));
   Serial.println("Light");
